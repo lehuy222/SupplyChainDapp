@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Supply Chain Dapp with PoW</title>
+    <script src="https://cdn.jsdelivr.net/gh/ethereum/web3.js/dist/web3.min.js"></script>
+    <script src="abi.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 20px;
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .section {
+            margin-bottom: 20px;
+        }
+
+        .section h2 {
+            margin-bottom: 10px;
+            color: #333;
+            font-size: 1.2em;
+        }
+
+        .input-group {
+            display: flex;
+            margin-bottom: 10px;
+        }
+
+        .input-group input {
+            flex: 1;
+            padding: 8px;
+            margin-right: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        .input-group button {
+            padding: 8px 16px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .input-group button:hover {
+            background-color: #0056b3;
+        }
+
+        #productDetails, #statusHistory {
+            background-color: #e9ecef;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 10px;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Supply Chain Dapp</h1>
+
+        <div class="section">
+            <h2>Add Product</h2>
+            <div class="input-group">
+                <input type="text" id="productName" placeholder="Product Name">
+                <input type="text" id="productStatus" placeholder="Initial Status">
+                <button onclick="powAddProduct()">Add Product with PoW</button>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>Update Product Status</h2>
+            <div class="input-group">
+                <input type="number" id="productIdUpdate" placeholder="Product ID">
+                <input type="text" id="newStatus" placeholder="New Status">
+                <button onclick="powUpdateStatus()">Update Status with PoW</button>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>Get Product Details</h2>
+            <div class="input-group">
+                <input type="number" id="productIdDetails" placeholder="Product ID">
+                <button onclick="getProductDetails()">Get Details</button>
+            </div>
+            <div id="productDetails"></div>
+        </div>
+
+        <div class="section">
+            <h2>Product Status History</h2>
+            <button onclick="getStatusHistory()">Get Status History</button>
+            <div id="statusHistory"></div>
+        </div>
+    </div>
+
+    <script>
+        const web3 = new Web3(Web3.givenProvider || "http://localhost:8545");
+        let contract;
+        const contractAddress = '0x649DA828E8Bc6e2e791B32855b846fC14a3df3F2'; // Replace with your contract address
+        let worker;
+
+        window.onload = async () => {
+            const accounts = await web3.eth.requestAccounts();
+            contract = new web3.eth.Contract(contractABI, contractAddress, { from: accounts[0] });
+
+            // Initialize the Web Worker
+            worker = new Worker('worker.js');
+
+            // Handle messages from the Web Worker
+            worker.onmessage = function(event) {
+                const { nonce, action } = event.data;
+                console.log(`Proof of Work completed with nonce: ${nonce} for action: ${action}`);
+                
+                // Execute corresponding action
+                if (action === 'addProduct') {
+                    performAddProductTransaction(nonce);
+                } else if (action === 'updateStatus') {
+                    performUpdateStatusTransaction(nonce);
+                }
+            };
+        };
+
+        // Function to add a product with PoW
+        async function powAddProduct() {
+            const name = document.getElementById('productName').value;
+            const status = document.getElementById('productStatus').value;
+            const difficulty = 4; // Set difficulty level for PoW
+
+            if (!name || !status) {
+                alert('Please enter both product name and status.');
+                return;
+            }
+
+            startProofOfWork(difficulty, 'addProduct'); // Start PoW for adding product
+        }
+
+        // Function to update product status with PoW
+        async function powUpdateStatus() {
+            const productId = parseInt(document.getElementById('productIdUpdate').value);
+            const newStatus = document.getElementById('newStatus').value;
+            const difficulty = 4; // Set difficulty level for PoW
+
+            if (isNaN(productId) || productId <= 0 || !newStatus) {
+                alert('Please enter a valid Product ID and new status.');
+                return;
+            }
+
+            startProofOfWork(difficulty, 'updateStatus'); // Start PoW for updating status
+        }
+
+        // Function to perform the transaction after PoW for adding a product
+        async function performAddProductTransaction(nonce) {
+            const name = document.getElementById('productName').value;
+            const status = document.getElementById('productStatus').value;
+
+            await contract.methods.addProduct(name, status).send({ gas: 3000000 })
+            .on('receipt', function(receipt){
+                const productId = receipt.events.ProductAdded.returnValues.productId;
+                alert(`Product added! Product ID is ${productId}`);
+            });
+        }
+
+        // Function to perform the transaction after PoW for updating status
+        async function performUpdateStatusTransaction(nonce) {
+            const productId = document.getElementById('productIdUpdate').value;
+            const status = document.getElementById('newStatus').value;
+
+            await contract.methods.updateStatus(productId, status).send({ gas: 3000000 })
+            .on('receipt', function(receipt){
+                alert('Product status updated successfully!');
+            });
+        }
+
+        // Function to start Proof of Work using Web Worker
+        function startProofOfWork(difficulty, action) {
+            worker.postMessage({ difficulty: difficulty, action: action });
+        }
+
+        async function getProductDetails() {
+        try {
+            const productId = parseInt(document.getElementById('productIdDetails').value);
+            if (isNaN(productId) || productId <= 0) {
+                alert('Please enter a valid Product ID.');
+                return;
+            }
+
+            console.log('Getting details for Product ID:', productId);
+
+            const result = await contract.methods.getProduct(productId).call();
+            const productName = result[0];
+            const status = result[1];
+            const timestamp = new Date(result[2] * 1000).toLocaleString();
+
+            document.getElementById('productDetails').innerText = 
+                `Product Name: ${productName}\nStatus: ${status}\nLast Updated: ${timestamp}`;
+        } catch (error) {
+            console.error('Error getting product details:', error);
+            alert('Failed to retrieve product details. Please try again.');
+        }
+    }
+
+        // Function to get product status history
+        async function getStatusHistory() {
+            try {
+                const productId = parseInt(document.getElementById('productIdDetails').value);
+                if (isNaN(productId) || productId <= 0) {
+                    alert('Please enter a valid Product ID.');
+                    return;
+                }
+
+                const productAddedEvents = await contract.getPastEvents('ProductAdded', {
+                    fromBlock: 0,
+                    toBlock: 'latest'
+                });
+
+                const statusUpdatedEvents = await contract.getPastEvents('StatusUpdated', {
+                    fromBlock: 0,
+                    toBlock: 'latest'
+                });
+
+                let statusHistoryText = `Status History for Product ID ${productId}:\n`;
+
+                productAddedEvents.forEach(event => {
+                    if (parseInt(event.returnValues.productId) === productId) {
+                        const { status, timestamp } = event.returnValues;
+                        statusHistoryText += `Added: ${status} at ${new Date(timestamp * 1000).toLocaleString()}\n`;
+                    }
+                });
+
+                statusUpdatedEvents.forEach(event => {
+                    if (parseInt(event.returnValues.productId) === productId) {
+                        const { status, timestamp } = event.returnValues;
+                        statusHistoryText += `Updated: ${status} at ${new Date(timestamp * 1000).toLocaleString()}\n`;
+                    }
+                });
+
+                document.getElementById('statusHistory').innerText = statusHistoryText;
+            } catch (error) {
+                console.error('Error getting status history:', error);
+                alert('Failed to retrieve status history. Please try again.');
+                }
+            }
+    </script>
+</body>
+</html>

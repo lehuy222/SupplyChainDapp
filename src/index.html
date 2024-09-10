@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Supply Chain Dapp</title>
+    <script src="https://cdn.jsdelivr.net/gh/ethereum/web3.js/dist/web3.min.js"></script>
+</head>
+<body>
+    <h1>Supply Chain Dapp</h1>
+
+    <div>
+        <h2>Add Product</h2>
+        <input type="text" id="productName" placeholder="Product Name">
+        <input type="text" id="productStatus" placeholder="Initial Status">
+        <button onclick="addProduct()">Add Product</button>
+    </div>
+
+    <div>
+        <h2>Update Product Status</h2>
+        <input type="number" id="productIdUpdate" placeholder="Product ID">
+        <input type="text" id="newStatus" placeholder="New Status">
+        <button onclick="updateStatus()">Update Status</button>
+    </div>
+
+    <div>
+        <h2>Get Product Details</h2>
+        <input type="number" id="productIdDetails" placeholder="Product ID">
+        <button onclick="getProductDetails()">Get Details</button>
+        <div id="productDetails"></div>
+    </div>
+
+    <script>
+        const web3 = new Web3(Web3.givenProvider || "http://localhost:8545");
+        let contract;
+        const contractAddress = '0x649DA828E8Bc6e2e791B32855b846fC14a3df3F2'; 
+        const contractABI = [
+            {
+                "constant": true,
+                "inputs": [
+                    {
+                        "name": "",
+                        "type": "uint256"
+                    }
+                ],
+                "name": "products",
+                "outputs": [
+                    {
+                        "name": "name",
+                        "type": "string"
+                    },
+                    {
+                        "name": "productId",
+                        "type": "uint256"
+                    },
+                    {
+                        "name": "status",
+                        "type": "string"
+                    },
+                    {
+                        "name": "timestamp",
+                        "type": "uint256"
+                    }
+                ],
+                "payable": false,
+                "stateMutability": "view",
+                "type": "function"
+            },
+            {
+                "constant": true,
+                "inputs": [],
+                "name": "owner",
+                "outputs": [
+                    {
+                        "name": "",
+                        "type": "address"
+                    }
+                ],
+                "payable": false,
+                "stateMutability": "view",
+                "type": "function"
+            },
+            {
+                "constant": true,
+                "inputs": [],
+                "name": "productCount",
+                "outputs": [
+                    {
+                        "name": "",
+                        "type": "uint256"
+                    }
+                ],
+                "payable": false,
+                "stateMutability": "view",
+                "type": "function"
+            },
+            {
+                "inputs": [],
+                "payable": false,
+                "stateMutability": "nonpayable",
+                "type": "constructor"
+            },
+            {
+                "anonymous": false,
+                "inputs": [
+                    {
+                        "indexed": false,
+                        "name": "productId",
+                        "type": "uint256"
+                    },
+                    {
+                        "indexed": false,
+                        "name": "name",
+                        "type": "string"
+                    },
+                    {
+                        "indexed": false,
+                        "name": "status",
+                        "type": "string"
+                    },
+                    {
+                        "indexed": false,
+                        "name": "timestamp",
+                        "type": "uint256"
+                    }
+                ],
+                "name": "ProductAdded",
+                "type": "event"
+            },
+            {
+                "anonymous": false,
+                "inputs": [
+                    {
+                        "indexed": false,
+                        "name": "productId",
+                        "type": "uint256"
+                    },
+                    {
+                        "indexed": false,
+                        "name": "status",
+                        "type": "string"
+                    },
+                    {
+                        "indexed": false,
+                        "name": "timestamp",
+                        "type": "uint256"
+                    }
+                ],
+                "name": "StatusUpdated",
+                "type": "event"
+            },
+            {
+                "constant": false,
+                "inputs": [
+                    {
+                        "name": "_name",
+                        "type": "string"
+                    },
+                    {
+                        "name": "_status",
+                        "type": "string"
+                    }
+                ],
+                "name": "addProduct",
+                "outputs": [],
+                "payable": false,
+                "stateMutability": "nonpayable",
+                "type": "function"
+            },
+            {
+                "constant": false,
+                "inputs": [
+                    {
+                        "name": "_productId",
+                        "type": "uint256"
+                    },
+                    {
+                        "name": "_status",
+                        "type": "string"
+                    }
+                ],
+                "name": "updateStatus",
+                "outputs": [],
+                "payable": false,
+                "stateMutability": "nonpayable",
+                "type": "function"
+            },
+            {
+                "constant": true,
+                "inputs": [
+                    {
+                        "name": "_productId",
+                        "type": "uint256"
+                    }
+                ],
+                "name": "getProduct",
+                "outputs": [
+                    {
+                        "name": "",
+                        "type": "string"
+                    },
+                    {
+                        "name": "",
+                        "type": "string"
+                    },
+                    {
+                        "name": "",
+                        "type": "uint256"
+                    }
+                ],
+                "payable": false,
+                "stateMutability": "view",
+                "type": "function"
+            }
+        ];
+
+        window.onload = async () => {
+            const accounts = await web3.eth.requestAccounts();
+            contract = new web3.eth.Contract(contractABI, contractAddress, { from: accounts[0] });
+        };
+
+        async function addProduct() {
+            const name = document.getElementById('productName').value;
+            const status = document.getElementById('productStatus').value;
+            await contract.methods.addProduct(name, status).send();
+            alert('Product added!');
+        }
+
+        async function updateStatus() {
+            const productId = document.getElementById('productIdUpdate').value;
+            const status = document.getElementById('newStatus').value;
+            await contract.methods.updateStatus(productId, status).send();
+            alert('Product status updated!');
+        }
+
+        async function getProductDetails() {
+            const productId = document.getElementById('productIdDetails').value;
+            const result = await contract.methods.getProduct(productId).call();
+            document.getElementById('productDetails').innerText = `Name: ${result[0]}, Status: ${result[1]}, Last Updated: ${new Date(result[2] * 1000)}`;
+        }
+    </script>
+</body>
+</html>

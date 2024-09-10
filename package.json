@@ -1,0 +1,31 @@
+{
+    "name": "supply-chain-dapp",
+    "version": "1.0.0",
+    "description": "A decentralized application for supply chain transparency and security using Ethereum.",
+    "main": "index.js",
+    "scripts": {
+      "start": "lite-server",
+      "test": "truffle test",
+      "build": "truffle compile",
+      "migrate": "truffle migrate"
+    },
+    "author": "Your Name",
+    "license": "MIT",
+    "dependencies": {
+      "web3": "^1.6.0"
+    },
+    "devDependencies": {
+      "lite-server": "^2.5.4",
+      "truffle": "^5.5.0"
+    },
+    "keywords": [
+      "ethereum",
+      "solidity",
+      "blockchain",
+      "dapp",
+      "truffle",
+      "web3",
+      "supply-chain"
+    ]
+  }
+  
